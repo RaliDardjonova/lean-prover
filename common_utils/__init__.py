@@ -1,0 +1,2 @@
+MARK_START_SYMBOL = "<a>"
+MARK_END_SYMBOL = "</a>"
