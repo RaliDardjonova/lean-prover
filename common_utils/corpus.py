@@ -39,15 +39,17 @@ class Corpus:
             assert not dep_graph.has_node(path)
             file = File.from_data(file_data)
 
-            # dep_graph.add_node(path, file=file)
+            dep_graph.add_node(path, file=file)
             self.all_premises.extend(file.premises)
 
-            # for p in file_data["imports"]:
-            #     assert dep_graph.has_node(p)
-            #     dep_graph.add_edge(path, p)
+            for p in file_data["imports"]:
+                assert dep_graph.has_node(p)
+                dep_graph.add_edge(path, p)
 
         assert nx.is_directed_acyclic_graph(dep_graph)
         self.transitive_dep_graph = nx.transitive_closure_dag(dep_graph)
+        print('----------------------------------------')
+        print(len(self.transitive_dep_graph.nodes))
 
         self.imported_premises_cache = {}
         self.fill_cache()

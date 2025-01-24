@@ -12,16 +12,10 @@ import torch.nn.functional as F
 from typing import List, Dict, Any, Tuple, Union
 from transformers import AutoModelForTextEncoding, AutoTokenizer
 
-from common_utils import (
-    Premise,
-    Context,
-    Corpus,
-    get_optimizers,
-    load_checkpoint,
-    zip_strict,
-    cpu_checkpointing_enabled,
-)
-
+from common_utils.context import Context
+from common_utils.corpus import Corpus
+from common_utils.premise import Premise
+from common_utils.utils import load_checkpoint, cpu_checkpointing_enabled, zip_strict, get_optimizers
 
 torch.set_float32_matmul_precision("medium")
 
@@ -129,7 +123,7 @@ class PremiseRetriever(pl.LightningModule):
         pos_premise_emb = self._encode(pos_premise_ids, pos_premise_mask)
         neg_premise_embs = [
             self._encode(ids, mask)
-            for ids, mask in zip_strict(neg_premises_ids, neg_premises_mask)
+            for ids, mask in    zip_strict(neg_premises_ids, neg_premises_mask)
         ]
         all_premise_embs = torch.cat([pos_premise_emb, *neg_premise_embs], dim=0)
 
