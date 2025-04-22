@@ -10,13 +10,9 @@ from typing import Optional, List, Dict, Any
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, ByT5Tokenizer
 
-from common import (
-    Batch,
-    Corpus,
-    Example,
-    remove_marks,
-    format_augmented_state,
-)
+from common_utils.context import Example, remove_marks, Batch
+from common_utils.corpus import Corpus
+from common_utils.utils import format_augmented_state
 
 
 class GeneratorDataset(Dataset):
@@ -34,6 +30,13 @@ class GeneratorDataset(Dataset):
         super().__init__()
         self.corpus = corpus
         self.preds = preds
+
+        logger.warning(f'Len of predictions: {([ pred[1] for pred in self.preds])}')
+        for pred in self.preds:
+            _, full_name, _ = pred
+            if full_name == 'Substring.Valid.foldr':
+                logger.warning(f'Prediction for \'Substring.Valid.foldr\': {pred}')
+
         self.max_inp_seq_len = max_inp_seq_len
         self.max_oup_seq_len = max_oup_seq_len
         self.p_drop = p_drop

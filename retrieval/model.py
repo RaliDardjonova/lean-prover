@@ -1,5 +1,5 @@
 """Ligihtning module for the premise retriever."""
-
+import gc
 import os
 import torch
 import pickle
@@ -204,7 +204,18 @@ class PremiseRetriever(pl.LightningModule):
         self.embeddings_staled = False
 
     def on_validation_start(self) -> None:
+        torch.cuda.memory._dump_snapshot("my_snapshot.pickle")
         self.reindex_corpus(self.trainer.datamodule.eval_batch_size)
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        gc.collect()
+        logger.warning(':::::::::::::::::::::::::::::::::::::::')
+        print("torch.cuda.memory_allocated: %fGB" % (torch.cuda.memory_allocated(0) / 1024 / 1024 / 1024))
+        print("torch.cuda.memory_reserved: %fGB" % (torch.cuda.memory_reserved(0) / 1024 / 1024 / 1024))
+        print("torch.cuda.max_memory_reserved: %fGB" % (torch.cuda.max_memory_reserved(0) / 1024 / 1024 / 1024))
+        logger.warning(torch.cuda.memory_summary())
+        #torch.cuda.memory._dump_snapshot("my_snapshot.pickle")
+        logger.warning('File written!')
 
     def validation_step(self, batch: Dict[str, Any], batch_idx: int) -> None:
         """Retrieve premises and calculate metrics such as Recall@K and MRR."""
@@ -217,15 +228,17 @@ class PremiseRetriever(pl.LightningModule):
             context_emb,
             self.num_retrieved,
         )
-
         # Evaluation & logging.
         recall = [[] for _ in range(self.num_retrieved)]
         MRR = []
         num_with_premises = 0
-
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        gc.collect()
         for i, (all_pos_premises, premises) in enumerate(
             zip_strict(batch["all_pos_premises"], retrieved_premises)
         ):
+            logger.info(f'step:{i}')
             all_pos_premises = set(all_pos_premises)
             if len(all_pos_premises) == 0:
                 continue
@@ -243,7 +256,7 @@ class PremiseRetriever(pl.LightningModule):
                 MRR.append(0.0)
 
         recall = [100 * np.mean(_) for _ in recall]
-
+        logger.info(f'Recall: {recall}')
         for j in range(self.num_retrieved):
             self.log(
                 f"Recall@{j+1}_val",
@@ -252,7 +265,7 @@ class PremiseRetriever(pl.LightningModule):
                 sync_dist=True,
                 batch_size=num_with_premises,
             )
-
+        logger.info(f"MRR: {np.mean(MRR)}")
         self.log(
             "MRR",
             np.mean(MRR),
@@ -260,6 +273,7 @@ class PremiseRetriever(pl.LightningModule):
             sync_dist=True,
             batch_size=num_with_premises,
         )
+
 
     ##############
     # Prediction #

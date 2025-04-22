@@ -9,8 +9,8 @@ tokenizer = AutoTokenizer.from_pretrained("kaiyuy/leandojo-lean4-retriever-tacge
 model = AutoModelForSeq2SeqLM.from_pretrained("kaiyuy/leandojo-lean4-retriever-tacgen-byt5-small")
 
 batch_size = 32
-state1 = "n : ℕ\n⊢ gcd n n = n"
-state = "n : ℕ\nih : n.gcd n = n\n⊢ (Order.succ n).gcd (Order.succ n) = Order.succ n"
+state0 = "n : ℕ\n⊢ gcd n n = n"
+state1 = "n : ℕ\nih : n.gcd n = n\n⊢ (Order.succ n).gcd (Order.succ n) = Order.succ n"
 indexed_corpus = pickle.load(open('data/corpus/indexed_corpus', "rb"))
 corpus = indexed_corpus.corpus
 corpus_embeddings = indexed_corpus.embeddings

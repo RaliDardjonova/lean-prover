@@ -10,12 +10,9 @@ from torchmetrics import Metric
 from typing import List, Dict, Any, Optional
 from transformers import T5ForConditionalGeneration, AutoTokenizer
 
-from common import (
-    remove_marks,
-    IndexedCorpus,
-    get_optimizers,
-    load_checkpoint,
-)
+from common_utils.context import remove_marks
+from common_utils.corpus import IndexedCorpus
+from common_utils.utils import load_checkpoint, get_optimizers
 from retrieval.model import PremiseRetriever
 
 
@@ -115,6 +112,7 @@ class RetrievalAugmentedGenerator(pl.LightningModule):
     ############
 
     def training_step(self, batch, batch_idx: int):
+        logger.info(f'Batch: {batch["state_ids"]}')
         loss = self(
             batch["state_ids"],
             batch["state_mask"],
@@ -162,6 +160,9 @@ class RetrievalAugmentedGenerator(pl.LightningModule):
 
         if self.retriever is not None:
             self.retriever.load_corpus(self.trainer.datamodule.corpus)
+            logger.info(f'loaded corpus: {len(self.retriever.corpus.all_premises)}')
+            if len (self.retriever.corpus.all_premises) < 10:
+                logger.info(self.retriever.corpus.all_premises)
 
     ##############
     # Validation #

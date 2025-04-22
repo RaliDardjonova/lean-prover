@@ -7,6 +7,8 @@ with Dojo(theorem) as (dojo, init_state):
   print(init_state)
   state1 = dojo.run_tac(init_state, "rw [add_assoc]")
   state2 = dojo.run_tac(state1, "rw [add_comm b]")
+  state3 = dojo.run_tac(state2, "rw [←add_assocccc]")
+  print('State3', state3)
   state3 = dojo.run_tac(state2, "rw [←add_assoc]")
   print(state3)
   # result = dojo.run_tac(init_state, "rw [add_assoc, add_comm b, ←add_assoc]")
