@@ -1,7 +1,7 @@
 
 import json
 
-minif2f_jsonl_leandojo = 'data/miniF2F/miniF2F-leandojo.jsonl'
+minif2f_jsonl_leandojo = 'data/miniF2F/miniF2F-leandojo2.jsonl'
 
 def create_test_dict(corpus_theorem: dict, path: str) -> dict:
 
@@ -17,19 +17,32 @@ def create_test_dict(corpus_theorem: dict, path: str) -> dict:
     }
 
 def get_dataset_type(path: str) -> str:
-    return path.split('/')[3]
+    return path.split('/')[1].split('.')[0].lower()
+
+# test_dataset = []
+# valid_dataset = []
+# for line in open(minif2f_jsonl_leandojo, 'r', encoding='utf-8'):
+#     file_dict = json.loads(line)
+#     path = file_dict['path']
+#     for theorem in file_dict['premises']:
+#         eval_dict = create_test_dict(theorem, path)
+#         if get_dataset_type(path) == 'test':
+#             test_dataset.append(eval_dict)
+#         else:
+#             valid_dataset.append(eval_dict)
 
 test_dataset = []
 valid_dataset = []
 for line in open(minif2f_jsonl_leandojo, 'r', encoding='utf-8'):
     file_dict = json.loads(line)
     path = file_dict['path']
-    for theorem in file_dict['premises']:
-        eval_dict = create_test_dict(theorem, path)
-        if get_dataset_type(path) == 'test':
-            test_dataset.append(eval_dict)
-        else:
-            valid_dataset.append(eval_dict)
+    if path == "MiniF2F/Test.lean" or path == "MiniF2F/Valid.lean":
+        for theorem in file_dict['premises']:
+            eval_dict = create_test_dict(theorem, path)
+            if get_dataset_type(path) == 'test':
+                test_dataset.append(eval_dict)
+            else:
+                valid_dataset.append(eval_dict)
 
 
 test_dataset_file_name = 'data/miniF2F/datasets/test.json'

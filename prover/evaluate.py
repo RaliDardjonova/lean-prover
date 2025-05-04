@@ -3,8 +3,9 @@
 
 import os
 import sys
+
 import torch
-from common_utils.corpus import IndexedCorpus
+
 from retrieval.model import PremiseRetriever
 
 os.environ["RAY_DEDUP_LOGS"] = "0"
@@ -14,7 +15,6 @@ import pickle
 import hashlib
 import argparse
 from loguru import logger
-from lean_dojo import Theorem
 from typing import List, Tuple, Optional
 from lean_dojo import LeanGitRepo, Theorem, Pos, is_available_in_cache
 
@@ -69,7 +69,7 @@ def _get_theorems_from_files(
     num_theorems: Optional[int],
 ) -> Tuple[LeanGitRepo, List[Theorem], List[Pos]]:
     data = json.load(open(os.path.join(data_path, f"{split}.json")))
-    data = data[1:4] # get only first 50 theorems
+    data = data[:] # get only first 50 theorems
     theorems = []
     positions = []
 
@@ -139,24 +139,25 @@ def evaluate(
     num_gpus: int = 0,
     save_results: bool = False,
     verbose: bool = False,
+    num_tries: int = 1
 ) -> float:
     set_logger(verbose)
 
     repo, theorems, positions = _get_theorems(
         data_path, split, file_path, full_name, name_filter, num_theorems
     )
-    print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
-    print(theorems)
-    theorem_names = [thm.full_name for thm in theorems]
+    # print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+    # print(theorems)
+    # theorem_names = [thm.full_name for thm in theorems]
     device = torch.device("cuda") if num_gpus > 0 else torch.device("cpu")
     retriever = PremiseRetriever.load_hf(
         ret_ckpt_path, max_inp_seq_len, device
     )
     retriever.load_corpus(indexed_corpus_path)
-    corpus_theorems = retriever.corpus.all_premises
-    full_theorems = [rewrite_theorem(thm) for thm in corpus_theorems if thm.full_name in theorem_names]
-    print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    print(full_theorems)
+    # corpus_theorems = retriever.corpus.all_premises
+    # full_theorems = [rewrite_theorem(thm) for thm in corpus_theorems if thm.full_name in theorem_names]
+    # print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    # print(full_theorems)
 
     # Search for proofs using multiple concurrent provers.
     prover = DistributedProver(
@@ -177,18 +178,44 @@ def evaluate(
         debug=verbose,
     )
 
-    results = prover.search_unordered(repo, theorems, positions)
+    n_results = {theorem.full_name: [] for theorem in theorems }
+    for i in range(num_tries):
+        results = prover.search_unordered(repo, theorems, positions)
+        print(results)
+        for result in results:
+            if result:
+                n_results[result.theorem.full_name].append(result)
+
+        zip_thm_pos = list(zip(theorems, positions))
+        proved_theorems = [result.theorem for result in results if result and result.status == Status.PROVED]
+        theorems = [theorem for theorem in theorems if theorem not in proved_theorems]
+        if not theorems:
+            break
+
+        print('::::::::::::::::::::::::::::::::')
+        zip_thm_pos = filter(lambda thm: thm[0] in theorems, zip_thm_pos)
+        positions = list(map(lambda x: x[1], zip_thm_pos))
+
 
     # Calculate the result statistics.
     num_proved = num_failed = num_discarded = 0
-    for r in results:
-        if r is None:
-            num_discarded += 1
-        elif r.status == Status.PROVED:
+
+    for _, r in n_results.items():
+        if  all(i is None for i in r):
+            num_discarded +=1
+        elif any(i.status == Status.PROVED for i in r):
             num_proved += 1
         else:
             num_failed += 1
 
+    # for r in results:
+    #     if r is None:
+    #         num_discarded += 1
+    #     elif r.status == Status.PROVED:
+    #         num_proved += 1
+    #     else:
+    #         num_failed += 1
+    logger.info(n_results)
     logger.info(
         f"Evaluation done! {num_proved} theorems proved, {num_failed} theorems failed, {num_discarded} non-theorems discarded"
     )
@@ -261,7 +288,7 @@ def main() -> None:
     parser.add_argument(
         "--timeout",
         type=int,
-        default=    900,
+        default=600,
         help="Maximum number of seconds the proof search can take.",
     )
     parser.add_argument(
@@ -279,6 +306,9 @@ def main() -> None:
     parser.add_argument("--save-results", action="store_true")
     parser.add_argument(
         "--verbose", action="store_true", help="Set the logging level to DEBUG."
+    )
+    parser.add_argument(
+        "--num-tries", type=int, help="Number of tries for a theorem"
     )
     args = parser.parse_args()
 
@@ -312,6 +342,7 @@ def main() -> None:
         args.num_gpus,
         args.save_results,
         args.verbose,
+        args.num_tries
     )
 
     logger.info(f"Pass@1: {pass_1}")

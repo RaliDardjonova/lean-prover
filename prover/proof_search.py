@@ -1,28 +1,24 @@
 """Proof search using best-first search.
 """
 
+import asyncio
 import sys
-import ray
 import time
 import uuid
+from typing import Tuple
+
+import ray
 import torch
-import asyncio
 from lean_dojo import (
     Pos,
     Dojo,
     Theorem,
     LeanGitRepo,
-    TacticState,
-    LeanError,
-    ProofFinished,
-    ProofGivenUp,
     DojoInitError,
     DojoCrashError,
     DojoTacticTimeoutError,
 )
 from loguru import logger
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
 from ray.util.actor_pool import ActorPool
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams, RequestOutput
 
@@ -98,9 +94,9 @@ class BestFirstSearchProver:
                 dojo,
                 init_state,
             ):
-                print('..........................................................................')
-                print(thm)
-                print(init_state)
+                # print('..........................................................................')
+                # print(thm)
+                # print(init_state)
                 self.dojo = dojo
                 self.root = InternalNode(
                     state=init_state,
@@ -205,7 +201,7 @@ class BestFirstSearchProver:
             if finished:
                 break
 
-        logger.warning(f"FULL Elapsed time for running tactics: {time.time() - t0:.2f}s")
+        # logger.warning(f"FULL Elapsed time for running tactics: {time.time() - t0:.2f}s")
         # Store the fixed out edges of this node, marking it as explored.
         # This will trigger recursively recomputing tree statistics.
         search_node.out_edges = results
@@ -237,7 +233,7 @@ class BestFirstSearchProver:
             theorem_pos=self.posision,
             num_samples=self.num_sampled_tactics,
         )
-        logger.warning(f"Elapsed time for generating tactics: {time.time() - t0:.2f}s")
+        # logger.warning(f"Elapsed time for generating tactics: {time.time() - t0:.2f}s")
         self.actor_time += time.time() - t0
 
         logger.debug(f"Tactic suggestions: {suggestions}")

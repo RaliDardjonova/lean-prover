@@ -213,8 +213,8 @@ class HuggingFaceGenerator(TacticGenerator):
         state_mask = tokenized_state.attention_mask.to(self.device)
 
         # Generate tactic candidates using beam search.
-        logger.warning(f'State ids length:{len(state_ids[0])}, pruned: {len(state_ids[:, :self.max_oup_seq_len -1][0])} ')
-        logger.warning(f'State mask len: {state_mask[:, :self.max_oup_seq_len - 1].shape}, {len(state_mask[0])}')
+        # logger.warning(f'State ids length:{len(state_ids[0])}, pruned: {len(state_ids[:, :self.max_oup_seq_len -1][0])} ')
+        # logger.warning(f'State mask len: {state_mask[:, :self.max_oup_seq_len - 1].shape}, {len(state_mask[0])}')
         t0 = time.time()
         output = self.generator.generate(
             input_ids=state_ids, # [:, :self.max_oup_seq_len - 1], # we need to be sure the input ids are less than max_length
@@ -229,7 +229,7 @@ class HuggingFaceGenerator(TacticGenerator):
             return_dict_in_generate=True
         )
         t1 = time.time() - t0
-        logger.info(f"Generation time: {t1:.2f}s")
+        # logger.info(f"Generation time: {t1:.2f}s")
 
         # Return the output.
         raw_output_text = self.tokenizer.batch_decode(
